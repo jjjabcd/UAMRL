@@ -16,14 +16,11 @@ UAMRL:Multi-Granularity Uncertainty-Aware Multimodal Representation Learning for
 
 [torch_geometric]([PyG Documentation — pytorch_geometric documentation (pytorch-geometric.readthedocs.io)](https://pytorch-geometric.readthedocs.io/en/latest/index.html))==2.3.1
 
-## Example usage
+## Example usage 
+
+You must provide .sdf file of the drug as well as .pdb file of the target. 
 
  ```bash
-# Convert source files to different file formats
-python first_sel_files.py
-python sec_get_seq.py
-
-
 # You can get the drug map representation and the target distance matrix by running the following command.
 python create_drug_graph.py
 python create_target_distance_matrix.py
@@ -33,4 +30,5 @@ python training.py
 
  ```
 
-# The code is still being sorted out
+ ## DOI
+ 10.5281/zenodo.16349374
