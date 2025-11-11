@@ -6,13 +6,13 @@ from util.graphUtil import getCompoundGraph
 from util.util import *
 from tqdm import tqdm
 
-train_id = pd.read_csv('data/train_data.csv')['PDBID'].to_numpy().tolist()
-val_id = pd.read_csv('data/val_data.csv')['PDBID'].to_numpy().tolist()
-test_id = pd.read_csv('data/test_data.csv')['PDBID'].to_numpy().tolist()
+train_id = pd.read_csv('../data/train_data.csv')['PDBID'].to_numpy().tolist()
+val_id = pd.read_csv('../data/val_data.csv')['PDBID'].to_numpy().tolist()
+test_id = pd.read_csv('../data/test_data.csv')['PDBID'].to_numpy().tolist()
 
-train_affinity = pd.read_csv('data/train_data.csv')['affinity'].to_numpy().tolist()
-val_affinity = pd.read_csv('data/val_data.csv')['affinity'].to_numpy().tolist()
-test_affinity = pd.read_csv('data/test_data.csv')['affinity'].to_numpy().tolist()
+train_affinity = pd.read_csv('../data/train_data.csv')['affinity'].to_numpy().tolist()
+val_affinity = pd.read_csv('../data/val_data.csv')['affinity'].to_numpy().tolist()
+test_affinity = pd.read_csv('../data/test_data.csv')['affinity'].to_numpy().tolist()
 
 if __name__ == '__main__':
 

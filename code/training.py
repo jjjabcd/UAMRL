@@ -9,7 +9,6 @@ from models.UAMRL import UAMRL
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from evaluate_metrics import *
 import prettytable as pt
 import networkx as nx 
 import matplotlib.pyplot as plt

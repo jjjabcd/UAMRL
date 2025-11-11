@@ -1,0 +1,31 @@
+# --- PyTorch/PyG 설치를 위한 특별 URL ---
+--extra-index-url https://download.pytorch.org/whl/cu118
+--find-links https://data.pyg.org/whl/torch-2.0.0+cu118.html
+
+# --- PyTorch & PyG (pip) ---
+torch==2.0.0+cu118
+torchvision==0.15.1+cu118
+torchaudio==2.0.1+cu118
+torch-geometric==2.3.1
+
+# --- 기존 Conda 패키지 -> pip로 변환 ---
+numpy==1.25.2
+pandas==1.5.2
+biopython==1.79
+scipy==1.9.3
+jupyter
+rdkit     # pip로 설치 시 RDKit
+h5py
+scikit-learn
+tqdm
+tensorboard
+
+# --- 기존 pip 패키지 ---
+opencv-python==4.7.0.72
+transformers==4.35.2
+tokenizers==0.14.1
+fair-esm
+prettytable
+
+# --- 오류가 발생했던 matplotlib ---
+matplotlib
