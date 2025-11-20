@@ -9,6 +9,12 @@ from rdkit.Chem import AllChem
 import shutil
 import re
 
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.*')
+
+import warnings
+warnings.filterwarnings('ignore')
+
 # 경로 설정
 # PDBbind 데이터 경로 설정
 # 방법 1: 절대 경로 사용 (권장)
@@ -304,6 +310,9 @@ def process_pdbbind_data():
             if smiles is None:
                 missing_files.append(f"{pdb_id}: failed to extract SMILES")
                 continue
+            
+            if ':' in smiles:
+                missing_files.append(f"{pdb_id}: SMILES contains ':'")
             
             data_list.append({
                 'PDBID': pdb_id,

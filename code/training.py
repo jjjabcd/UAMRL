@@ -143,5 +143,3 @@ if __name__ == '__main__':
                 curr_patience = patience
                 scheduler.step()
                 print(f"Current learning rate: {optimizer.state_dict()['param_groups'][0]['lr']}")
-
-    

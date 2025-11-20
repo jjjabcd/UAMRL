@@ -13,6 +13,15 @@ from math import sqrt
 from sklearn import metrics
 from scipy import stats
 
+# smiles_dict = {"#": 29, "%": 30, ")": 31, "(": 1, "+": 32, "-": 33, "/": 34, ".": 2, 
+# 				"1": 35, "0": 3, "3": 36, "2": 4, "5": 37, "4": 5, "7": 38, "6": 6, 
+# 				"9": 39, "8": 7, "=": 40, "A": 41, "@": 8, "C": 42, "B": 9, "E": 43, 
+# 				"D": 10, "G": 44, "F": 11, "I": 45, "H": 12, "K": 46, "M": 47, "L": 13, 
+# 				"O": 48, "N": 14, "P": 15, "S": 49, "R": 16, "U": 50, "T": 17, "W": 51, 
+# 				"V": 18, "Y": 52, "[": 53, "Z": 19, "]": 54, "\\": 20, "a": 55, "c": 56, 
+# 				"b": 21, "e": 57, "d": 22, "g": 58, "f": 23, "i": 59, "h": 24, "m": 60, 
+# 				"l": 25, "o": 61, "n": 26, "s": 62, "r": 27, "u": 63, "t": 28, "y": 64}
+
 smiles_dict = {"#": 29, "%": 30, ")": 31, "(": 1, "+": 32, "-": 33, "/": 34, ".": 2, 
 				"1": 35, "0": 3, "3": 36, "2": 4, "5": 37, "4": 5, "7": 38, "6": 6, 
 				"9": 39, "8": 7, "=": 40, "A": 41, "@": 8, "C": 42, "B": 9, "E": 43, 
@@ -20,21 +29,41 @@ smiles_dict = {"#": 29, "%": 30, ")": 31, "(": 1, "+": 32, "-": 33, "/": 34, "."
 				"O": 48, "N": 14, "P": 15, "S": 49, "R": 16, "U": 50, "T": 17, "W": 51, 
 				"V": 18, "Y": 52, "[": 53, "Z": 19, "]": 54, "\\": 20, "a": 55, "c": 56, 
 				"b": 21, "e": 57, "d": 22, "g": 58, "f": 23, "i": 59, "h": 24, "m": 60, 
-				"l": 25, "o": 61, "n": 26, "s": 62, "r": 27, "u": 63, "t": 28, "y": 64}
+				"l": 25, "o": 61, "n": 26, "s": 62, "r": 27, "u": 63, "t": 28, "y": 64, ":": 65}
 
 amino_acids = ['PAD','A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+
+# def smiles2onehot(pdbid):
+#     seq = pd.read_csv('train_set/drug_smiles/' + pdbid + '.smi', header=None).to_numpy().tolist()[0][0].split('\t')[0]
+#     integer_encoder = []
+#     onehot_encoder = []
+#     for item in seq:
+#         integer_encoder.append(smiles_dict[item])
+#     for index in integer_encoder:
+#         temp = [0 for _ in range(len(smiles_dict) + 1)]
+#         temp[index] = 1
+#         onehot_encoder.append(temp)
+#     return onehot_encoder
 
 def smiles2onehot(pdbid):
     seq = pd.read_csv('train_set/drug_smiles/' + pdbid + '.smi', header=None).to_numpy().tolist()[0][0].split('\t')[0]
     integer_encoder = []
     onehot_encoder = []
+    # onehot 벡터 크기를 65로 고정 (모델이 기대하는 크기, padding과 일치)
+    vocab_size = 65
     for item in seq:
-        integer_encoder.append(smiles_dict[item])
+        # 알 수 없는 문자의 경우 0 (PAD 토큰) 사용
+        idx = smiles_dict.get(item, 0)
+        # 인덱스가 vocab_size를 초과하지 않도록 제한
+        if idx >= vocab_size:
+            idx = 0
+        integer_encoder.append(idx)
     for index in integer_encoder:
-        temp = [0 for _ in range(len(smiles_dict) + 1)]
+        temp = [0 for _ in range(vocab_size)]  # 65로 고정
         temp[index] = 1
         onehot_encoder.append(temp)
     return onehot_encoder
+
 
 def protein2onehot(pdbid):
     for seq_recoder in SeqIO.parse('train_set/target_fasta/' + pdbid + '.fasta', 'fasta'):
@@ -63,14 +92,27 @@ def _to_onehot(data, max_len):
             feature_list.append(feature)
         else:
             print('max length error!')
+            
+            
+    # for i in range(len(feature_list)):
+    #     if len(feature_list[i]) != max_len:
+    #         for j in range(max_len - len(feature_list[i])):
+    #             if max_len == 1000:
+    #                 temp = [0] * 21
+    #                 temp[0] = 1
+    #             elif max_len == 150:
+    #                 temp = [0] * 65
+    #                 temp[0] = 1
+    #             feature_list[i].append(temp)
+    
     for i in range(len(feature_list)):
         if len(feature_list[i]) != max_len:
             for j in range(max_len - len(feature_list[i])):
                 if max_len == 1000:
-                    temp = [0] * 21
+                    temp = [0] * len(amino_acids) 
                     temp[0] = 1
                 elif max_len == 150:
-                    temp = [0] * 65
+                    temp = [0] * (len(smiles_dict) + 1) 
                     temp[0] = 1
                 feature_list[i].append(temp)
     return torch.from_numpy(np.array(feature_list, dtype=np.float32))
