@@ -7,3 +7,7 @@ code/__pycache__/*
 code/models/__pycache__/*
 
 code/util/__pycache__/*
+
+code/results/*
+
+code/train_set/*
