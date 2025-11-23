@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 import prettytable as pt
 import networkx as nx 
 import matplotlib.pyplot as plt
-device = torch.device('cuda:0')
+device = torch.device('cuda:1')
 
 def training(model, train_loader, optimizer, config, epoch, epochs):
     model.train()
@@ -26,7 +26,7 @@ def training(model, train_loader, optimizer, config, epoch, epochs):
         protein_img = torch.from_numpy(img_resize(data.id)).unsqueeze(1).to(torch.float).to(device)
         model_output, cmd_loss = model(compound_sequence, protein_sequence, protein_img, data.to(device))
      
-        mu, v, alpha, beta = moe_nig(model_output)
+        mu, v, alpha, beta = moe_nig(*model_output)
         
         (mu_ss, v_ss, alpha_ss, beta_ss,
          mu_gg, v_gg, alpha_gg, beta_gg,
@@ -69,10 +69,10 @@ def validation(model, loader, config, epoch=1, epochs=1):
             compound_sequence = _to_onehot(data.id, 150).to(device)
             protein_sequence = _to_onehot(data.id, 1000).to(device)
             protein_img = torch.from_numpy(img_resize(data.id)).unsqueeze(1).to(torch.float).to(device)
-            model_output, = model(compound_sequence, protein_sequence, protein_img,  data.to(device))
-            output, = moe_nig(model_output)
+            model_output, cmd_loss = model(compound_sequence, protein_sequence, protein_img,  data.to(device))
+            mu, v, alpha, beta = moe_nig(*model_output)
 
-            total_preds = torch.cat((total_preds, output.detach().cpu()), 0)
+            total_preds = torch.cat((total_preds, mu.detach().cpu()), 0)
             total_labels = torch.cat((total_labels, data.y.view(-1, 1).cpu()), 0)
     total_labels = total_labels.numpy().flatten()
     total_preds = total_preds.numpy().flatten()
@@ -84,6 +84,13 @@ if __name__ == '__main__':
 
     # load dataset
     batch_size = config.batch_size
+    output_dir = config.output_dir
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    if not os.path.exists(f'{output_dir}/best_model'):
+        os.makedirs(f'{output_dir}/best_model')
+        
     train_data = CompoundDataset(root='train_set', dataset='train_data')
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_data = CompoundDataset(root='train_set', dataset='test_data')
@@ -125,7 +132,7 @@ if __name__ == '__main__':
         tb.add_row([f'{epoch} / {curr_patience}', 'Test', f'{test_result[0]:.4f}', f'{test_result[1]:.4f}', f'{test_result[2]:.4f}', f'{test_result[3]:.4f}', f'{test_result[4]:.4f}'])
 
         print(tb)
-        with open(f'result/{config.name}.txt', 'a') as write:
+        with open(f'{output_dir}/{config.name}.txt', 'a') as write:
             write.writelines(str(tb) + '\n')
         if test_result[1] < best_result:
             best_result = test_result[1]
@@ -135,7 +142,7 @@ if __name__ == '__main__':
             for param_group in optimizer.param_groups:
                 param_group['lr'] = learning_rate  # 修改学习率
             print(f"Current learning rate: {optimizer.state_dict()['param_groups'][0]['lr']}")
-            torch.save(model.state_dict(), f'data/best_model/model_{config.name}.pt')
+            torch.save(model.state_dict(), f'{output_dir}/best_model/model_{config.name}.pt')
         else:
             curr_patience -= 1
             if curr_patience <= -1:

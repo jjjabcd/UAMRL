@@ -23,10 +23,11 @@ def get_config(parse=True, **optional_kwargs):
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--name', type=str, default="0")
-    parser.add_argument('--compound_sequence_dim', type=int, default=66)
+    parser.add_argument('--output_dir', type=str, default="./results")
+    parser.add_argument('--compound_sequence_dim', type=int, default=65)
     parser.add_argument('--protein_sequence_dim', type=int, default=21)
     parser.add_argument('--learning_rate', type=float, default=5e-5)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--patience', type=int, default=10)
     parser.add_argument('--diff_weight', type=float, default=1.0)

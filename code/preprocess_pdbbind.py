@@ -149,52 +149,25 @@ def extract_protein_sequence_from_pdb(pdb_path):
         return None
 
 def extract_smiles_from_sdf(sdf_path):
-    """SDF 파일에서 SMILES 추출 (RDKit 사용)"""
     try:
-        # SDF 파일에서 분자 읽기
         supplier = Chem.SDMolSupplier(sdf_path, sanitize=False)
-        
         for mol in supplier:
-            if mol is not None:
-                try:
-                    # 분자 sanitize 시도
-                    Chem.SanitizeMol(mol)
-                    # SMILES로 변환
-                    smiles = Chem.MolToSmiles(mol, isomericSmiles=True)
-                    if smiles and len(smiles) > 0:
-                        return smiles
-                except:
-                    # sanitize 실패 시 그래도 시도
-                    try:
-                        smiles = Chem.MolToSmiles(mol, isomericSmiles=True, sanitize=False)
-                        if smiles and len(smiles) > 0:
-                            return smiles
-                    except:
-                        continue
-        
-        # 실패 시 다른 방법 시도: 파일 직접 읽기 후 RDKit으로 변환
-        try:
-            with open(sdf_path, 'r') as f:
-                content = f.read()
-            # 첫 번째 분자만 읽기
-            mol = Chem.MolFromMolBlock(content.split('$$$$')[0], sanitize=False)
-            if mol is not None:
-                try:
-                    Chem.SanitizeMol(mol)
-                    smiles = Chem.MolToSmiles(mol, isomericSmiles=True)
-                    if smiles and len(smiles) > 0:
-                        return smiles
-                except:
-                    smiles = Chem.MolToSmiles(mol, isomericSmiles=True, sanitize=False)
-                    if smiles and len(smiles) > 0:
-                        return smiles
-        except:
-            pass
-        
+            if mol is None:
+                continue
+
+            # <-- sanitize must be required
+            try:
+                Chem.SanitizeMol(mol)
+            except Exception:
+                return None
+
+            return Chem.MolToSmiles(mol, canonical=True)
+
         return None
-    except Exception as e:
-        # 에러는 출력하지 않음 (너무 많은 출력 방지)
+    except:
         return None
+
+
 
 def process_pdbbind_data():
     """
@@ -313,6 +286,7 @@ def process_pdbbind_data():
             
             if ':' in smiles:
                 missing_files.append(f"{pdb_id}: SMILES contains ':'")
+                continue
             
             data_list.append({
                 'PDBID': pdb_id,
