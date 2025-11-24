@@ -77,6 +77,7 @@ class GraphConv(nn.Module):
         self.cconv1 = SAGEConv(emb_dim, hidden_dim, aggr='sum')
         self.cconv2 = SAGEConv(hidden_dim, hidden_dim * 2, aggr='sum')
         self.cconv3 = SAGEConv(hidden_dim * 2, hidden_dim * 4, aggr='sum')
+        self.norm = nn.LayerNorm(emb_dim)
         
         self.relu = nn.LeakyReLU()
         self.dropout = nn.Dropout(dropout)
@@ -87,7 +88,9 @@ class GraphConv(nn.Module):
         # 获取小分子和蛋白质输入的结构信息
         compound_feature, compound_index, compound_batch = data.x, data.edge_index, data.batch
         # 对小分子进行卷积操作
-        compound_feature = self.dropout(self.emb(compound_feature))
+        compound_feature = self.emb(compound_feature)
+        compound_feature = self.norm(compound_feature)
+        compound_feature = self.dropout(compound_feature)
 
         compound_feature = self.cconv1(compound_feature, compound_index)
         compound_feature = self.relu(compound_feature)
@@ -226,10 +229,10 @@ class UAMRL(nn.Module):
         return F.softplus(x)
 
     def split(self, mu, logv, logalpha, logbeta):
-        # 用于将预测的输出分解为 mu（均值）、v（方差）、alpha 和 beta，并通过 evidence() 函数保证它们为正值。
-        v = self.evidence(logv)
-        alpha = self.evidence(logalpha) + 1
-        beta = self.evidence(logbeta)
+        eps = 1e-6
+        v = torch.clamp(self.evidence(logv), min=eps)
+        alpha = torch.clamp(self.evidence(logalpha) + 1.0, min=1.0 + eps)
+        beta = torch.clamp(self.evidence(logbeta), min=eps)
         return mu, v, alpha, beta
         
     def get_cmdloss(self, x1, x2):

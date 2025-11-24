@@ -25,15 +25,27 @@ smiles_dict = {"#": 29, "%": 30, ")": 31, "(": 1, "+": 32, "-": 33, "/": 34, "."
 amino_acids = ['PAD','A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 
 def smiles2onehot(pdbid):
-    seq = pd.read_csv('train_set/drug_smiles/' + pdbid + '.smi', header=None).to_numpy().tolist()[0][0].split('\t')[0]
+    seq = pd.read_csv(
+        f'train_set/drug_smiles/{pdbid}.smi',
+        header=None
+    ).to_numpy().tolist()[0][0].split('\t')[0]
+
+    cleaned = "".join([c for c in seq if c in smiles_dict])
+
+    if len(cleaned) == 0:
+        cleaned = "C"
+
     integer_encoder = []
     onehot_encoder = []
-    for item in seq:
+
+    for item in cleaned:
         integer_encoder.append(smiles_dict[item])
+
     for index in integer_encoder:
         temp = [0 for _ in range(len(smiles_dict) + 1)]
         temp[index] = 1
         onehot_encoder.append(temp)
+
     return onehot_encoder
 
 def protein2onehot(pdbid):
@@ -157,8 +169,11 @@ class CMD(nn.Module):
         sx2 = x2 - mx2
         
         # 对中心化向量进行标准化处理
-        sx1_std = torch.std(sx1, dim=0) + 1e-8
-        sx2_std = torch.std(sx2, dim=0) + 1e-8
+        sx1_std = torch.std(sx1, dim=0)
+        sx2_std = torch.std(sx2, dim=0)
+        eps = 1e-6
+        sx1_std = torch.clamp(sx1_std, min=eps)
+        sx2_std = torch.clamp(sx2_std, min=eps)
         sx1 = sx1 / sx1_std
         sx2 = sx2 / sx2_std
 
@@ -167,6 +182,11 @@ class CMD(nn.Module):
         scms = dm
         for i in range(n_moments - 1):
             scms += self.scm(sx1, sx2, i + 2)
+            
+        if torch.isnan(scms):
+            scms = torch.tensor(0.0, device=scms.device)
+        return scms
+        
         return scms
 
     def matchnorm(self, x1, x2):

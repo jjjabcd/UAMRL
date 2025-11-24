@@ -1,18 +1,11 @@
 #!/bin/bash
 
-##############################################
-# 사용자 입력
-##############################################
-
 CHECKPOINT="/home/rlawlsgurjh/hdd/work/DTA/UAMRL/code/results/best_model/model_0.pt"
 
-SDF_PATH="/home/rlawlsgurjh/hdd/work/DTA/UAMRL/code/train_set/drug_sdf/1a0t.sdf"
-PDB_PATH="/home/rlawlsgurjh/hdd/work/DTA/UAMRL/code/train_set/target_pdb/1a0t.pdb"
+PDB_ID="1ax1"
+SDF_PATH="/home/rlawlsgurjh/hdd/work/DTA/UAMRL/code/train_set/drug_sdf/${PDB_ID}.sdf"
+PDB_PATH="/home/rlawlsgurjh/hdd/work/DTA/UAMRL/code/train_set/target_pdb/${PDB_ID}.pdb"
 
-
-##############################################
-# 실행
-##############################################
 
 echo "[INFO] Running prediction..."
 echo " - Checkpoint : $CHECKPOINT"

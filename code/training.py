@@ -12,15 +12,15 @@ from torch.utils.tensorboard import SummaryWriter
 import prettytable as pt
 import networkx as nx 
 import matplotlib.pyplot as plt
-device = torch.device('cuda:1')
+device = torch.device('cuda:0')
 
 def training(model, train_loader, optimizer, config, epoch, epochs):
     model.train()
     loop = tqdm(enumerate(train_loader), total=len(train_loader), colour='red', ncols=100)
     training_loss = 0.0
     for batch, data in loop:
-        if len(data) < 2:
-            break
+        # if len(data) < 2:
+        #     break
         compound_sequence = _to_onehot(data.id, 150).to(device)
         protein_sequence = _to_onehot(data.id, 1000).to(device)
         protein_img = torch.from_numpy(img_resize(data.id)).unsqueeze(1).to(torch.float).to(device)

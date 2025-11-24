@@ -35,7 +35,7 @@ def get_config(parse=True, **optional_kwargs):
     parser.add_argument('--recon_weight', type=float, default=1.0)
     parser.add_argument('--hidden_size', type=int, default=256)
     parser.add_argument('--dropout', type=float, default=0.5)
-    parser.add_argument('--cmd_weight', type=float, default=0.0001)
+    parser.add_argument('--cmd_weight', type=float, default=0.0)
 
     # Parse arguments
     if parse:
