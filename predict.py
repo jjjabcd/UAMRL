@@ -15,7 +15,6 @@ from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"[INFO] Using device: {device}")
 
 ############################################
 # Drug SDF → SMILES
