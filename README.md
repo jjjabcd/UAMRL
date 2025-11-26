@@ -25,7 +25,7 @@ Place the downloaded archive file into the data/ directory of this project.
 
 ```bash
 # Assuming the file is downloaded to the project root:
-mkdir -p data
+
 mv pdbbind_v2016.tar.gz data/
 
 cd data
