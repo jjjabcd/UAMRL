@@ -1,13 +1,13 @@
 data/*
+results/*
+train_set/*
 
-notebooks/*
 
-code/__pycache__/*
+!data/.gitkeep
+!train_set/.gitkeep
+!results/.gitkeep
 
-code/models/__pycache__/*
 
-code/util/__pycache__/*
+uamrl/__pycache__/*
 
-code/results/*
-
-code/train_set/*
+uamrl/*/__pycache__/*
