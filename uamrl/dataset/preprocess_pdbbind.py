@@ -15,30 +15,19 @@ RDLogger.DisableLog('rdApp.*')
 import warnings
 warnings.filterwarnings('ignore')
 
-# 경로 설정
-# PDBbind 데이터 경로 설정
-# 방법 1: 절대 경로 사용 (권장)
-PDBBIND_ROOT = '/HDD1/rlawlsgurjh/work/DTA/UAMRL/data/v2016'
 
-# 방법 2: 상대 경로 사용 (절대 경로가 작동하지 않을 경우)
-# PDBBIND_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'v2016')
+# PDBBIND_ROOT = '/HDD1/rlawlsgurjh/work/DTA/UAMRL/data/v2016'
+
+PDBBIND_ROOT = os.path.join('data', 'v2016')
 INDEX_DIR = os.path.join(PDBBIND_ROOT, 'index')
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+OUTPUT_DIR = os.path.join('data')
 TRAIN_SET_DIR = 'train_set'
 
 def parse_index_file(index_path, has_affinity_column=True):
-    """
-    INDEX 파일 파싱
-    - INDEX_core_data.2016, INDEX_refined_data.2016: 
-      형식: PDB code, resolution, release year, -logKd/Ki, Kd/Ki, reference, ligand name
-    - INDEX_general_PL.2016:
-      형식: PDB code, resolution, release year, binding data, reference, ligand name
-      (binding data에서 Kd/Ki 값을 파싱해야 함)
-    """
+
     pdb_ids = []
     affinities = []
     
-    # 인코딩 시도 (UTF-8, latin-1, ISO-8859-1 순서로)
     encodings = ['utf-8', 'latin-1', 'ISO-8859-1', 'cp1252']
     file_content = None
     
@@ -56,11 +45,9 @@ def parse_index_file(index_path, has_affinity_column=True):
     
     for line in file_content:
         line = line.strip()
-        # 주석이나 빈 줄 건너뛰기
         if not line or line.startswith('#'):
             continue
-        
-        # 공백으로 분리
+
         parts = line.split()
         if len(parts) < 4:
             continue
@@ -68,25 +55,19 @@ def parse_index_file(index_path, has_affinity_column=True):
         pdb_id = parts[0].lower()
         
         if has_affinity_column:
-            # Core/Refined set: 4번째 컬럼이 -logKd/Ki
             try:
                 log_affinity = float(parts[3])
-                affinity = -log_affinity  # pKd 또는 pKi
+                affinity = -log_affinity
             except ValueError:
                 continue
         else:
-            # General set: binding data에서 파싱
-            # 예: "Kd=49uM", "Ki=0.43uM", "Kd=5nM" 등
             binding_data = parts[3]
             affinity = None
             
             try:
-                # Kd= 또는 Ki= 패턴 찾기
                 if 'Kd=' in binding_data or 'Ki=' in binding_data:
-                    # 값 추출
                     value_str = binding_data.split('=')[1]
-                    
-                    # 단위 변환
+
                     if 'pM' in value_str:
                         value = float(value_str.replace('pM', '')) * 1e-12
                     elif 'nM' in value_str:
@@ -98,14 +79,11 @@ def parse_index_file(index_path, has_affinity_column=True):
                     elif 'M' in value_str:
                         value = float(value_str.replace('M', ''))
                     else:
-                        # 숫자만 있는 경우 (단위 없음)
                         value = float(value_str)
-                    
-                    # -log10(Kd/Ki)로 변환
+
                     if value > 0:
                         affinity = -np.log10(value)
             except (ValueError, IndexError):
-                # 파싱 실패 시 건너뛰기
                 continue
             
             if affinity is None:
@@ -117,7 +95,6 @@ def parse_index_file(index_path, has_affinity_column=True):
     return pdb_ids, affinities
 
 def extract_protein_sequence_from_pdb(pdb_path):
-    """PDB 파일에서 단백질 서열 추출"""
     try:
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure('protein', pdb_path)
@@ -126,9 +103,8 @@ def extract_protein_sequence_from_pdb(pdb_path):
         for model in structure:
             for chain in model:
                 for residue in chain:
-                    if residue.id[0] == ' ':  # 일반 residue만
+                    if residue.id[0] == ' ':
                         resname = residue.get_resname()
-                        # 3-letter code를 1-letter code로 변환
                         aa_map = {
                             'ALA': 'A', 'CYS': 'C', 'ASP': 'D', 'GLU': 'E',
                             'PHE': 'F', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I',
@@ -138,9 +114,9 @@ def extract_protein_sequence_from_pdb(pdb_path):
                         }
                         if resname in aa_map:
                             sequence.append(aa_map[resname])
-                if sequence:  # 첫 번째 비어있지 않은 chain만 사용
+                if sequence:
                     break
-            if sequence:  # 첫 번째 비어있지 않은 model만 사용
+            if sequence:
                 break
         
         return ''.join(sequence) if sequence else None
@@ -170,24 +146,14 @@ def extract_smiles_from_sdf(sdf_path):
 
 
 def process_pdbbind_data():
-    """
-    PDBbind 데이터 전처리 (논문 방법에 따라)
-    1. Core set을 test set으로 사용 (290개)
-    2. General set과 Refined set을 합침
-    3. Core set과의 overlap 제거
-    4. Train/Val split (약 10%를 validation set으로)
-    """
-    
     print("=" * 60)
     print("Step 1: Parsing INDEX files...")
     print("=" * 60)
-    
-    # Core set 파싱 (test set)
+
     core_index_path = os.path.join(INDEX_DIR, 'INDEX_core_data.2016')
     core_pdb_ids, core_affinities = parse_index_file(core_index_path)
     print(f"Core set: {len(core_pdb_ids)} complexes")
-    
-    # General set 파싱 (affinity 컬럼이 없음)
+
     general_index_path = os.path.join(INDEX_DIR, 'INDEX_general_PL.2016')
     if os.path.exists(general_index_path):
         general_pdb_ids, general_affinities = parse_index_file(general_index_path, has_affinity_column=False)
@@ -196,29 +162,24 @@ def process_pdbbind_data():
         print("Warning: INDEX_general_PL.2016 not found, using refined set only")
         general_pdb_ids, general_affinities = [], []
     
-    # Refined set 파싱
     refined_index_path = os.path.join(INDEX_DIR, 'INDEX_refined_data.2016')
     refined_pdb_ids, refined_affinities = parse_index_file(refined_index_path)
     print(f"Refined set: {len(refined_pdb_ids)} complexes")
     
-    # General set과 Refined set을 합침 (중복 제거)
     print("\nMerging general and refined sets...")
     all_train_val_pdb_ids = {}
     all_train_val_affinities = {}
     
-    # General set 추가
     for pdb_id, affinity in zip(general_pdb_ids, general_affinities):
         all_train_val_pdb_ids[pdb_id] = affinity
         all_train_val_affinities[pdb_id] = affinity
     
-    # Refined set 추가 (중복시 refined set 값 사용)
     for pdb_id, affinity in zip(refined_pdb_ids, refined_affinities):
         all_train_val_pdb_ids[pdb_id] = affinity
         all_train_val_affinities[pdb_id] = affinity
     
     print(f"Total (general + refined): {len(all_train_val_pdb_ids)} complexes")
     
-    # Core set과의 overlap 제거
     core_set = set(core_pdb_ids)
     train_val_pdb_ids = []
     train_val_affinities = []
@@ -230,12 +191,10 @@ def process_pdbbind_data():
     
     print(f"Train/Val set (after removing core set): {len(train_val_pdb_ids)} complexes")
     
-    # Train/Val split (약 10%를 validation set으로)
     np.random.seed(42)
     indices = np.arange(len(train_val_pdb_ids))
     np.random.shuffle(indices)
-    
-    # 약 10%를 validation set으로
+
     val_size = int(len(train_val_pdb_ids) * 0.1)
     train_indices = indices[val_size:]
     val_indices = indices[:val_size]
@@ -253,8 +212,7 @@ def process_pdbbind_data():
     print("\n" + "=" * 60)
     print("Step 2: Processing files and extracting data...")
     print("=" * 60)
-    
-    # 데이터 수집
+
     def collect_data(pdb_ids, affinities, split_name):
         data_list = []
         missing_files = []
@@ -263,22 +221,19 @@ def process_pdbbind_data():
             pdb_folder = os.path.join(PDBBIND_ROOT, pdb_id)
             protein_pdb = os.path.join(pdb_folder, f"{pdb_id}_protein.pdb")
             ligand_sdf = os.path.join(pdb_folder, f"{pdb_id}_ligand.sdf")
-            
-            # 파일 존재 확인
+
             if not os.path.exists(protein_pdb):
                 missing_files.append(f"{pdb_id}: protein PDB not found")
                 continue
             if not os.path.exists(ligand_sdf):
                 missing_files.append(f"{pdb_id}: ligand SDF not found")
                 continue
-            
-            # 단백질 서열 추출
+
             sequence = extract_protein_sequence_from_pdb(protein_pdb)
             if sequence is None or len(sequence) == 0:
                 missing_files.append(f"{pdb_id}: failed to extract sequence")
                 continue
             
-            # SMILES 추출
             smiles = extract_smiles_from_sdf(ligand_sdf)
             if smiles is None:
                 missing_files.append(f"{pdb_id}: failed to extract SMILES")
@@ -297,7 +252,7 @@ def process_pdbbind_data():
         
         if missing_files:
             print(f"\nWarning: {len(missing_files)} files missing or failed:")
-            for msg in missing_files[:10]:  # 처음 10개만 출력
+            for msg in missing_files[:10]:
                 print(f"  {msg}")
             if len(missing_files) > 10:
                 print(f"  ... and {len(missing_files) - 10} more")
@@ -316,8 +271,7 @@ def process_pdbbind_data():
     print("\n" + "=" * 60)
     print("Step 3: Creating CSV files...")
     print("=" * 60)
-    
-    # CSV 파일 저장 (PDBID, affinity 형식)
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
     train_df[['PDBID', 'affinity']].to_csv(
@@ -336,38 +290,31 @@ def process_pdbbind_data():
     print("Step 4: Copying and organizing files...")
     print("=" * 60)
     
-    # 디렉토리 생성
     os.makedirs(os.path.join(TRAIN_SET_DIR, 'drug_sdf'), exist_ok=True)
     os.makedirs(os.path.join(TRAIN_SET_DIR, 'target_pdb'), exist_ok=True)
     os.makedirs(os.path.join(TRAIN_SET_DIR, 'drug_smiles'), exist_ok=True)
     os.makedirs(os.path.join(TRAIN_SET_DIR, 'target_fasta'), exist_ok=True)
     
-    # 모든 데이터 합치기
     all_df = pd.concat([train_df, val_df, test_df])
-    
-    # 파일 복사 및 생성
+
     for _, row in tqdm(all_df.iterrows(), total=len(all_df), desc="Copying files"):
         pdb_id = row['PDBID']
         pdb_folder = os.path.join(PDBBIND_ROOT, pdb_id)
-        
-        # SDF 파일 복사
+
         src_sdf = os.path.join(pdb_folder, f"{pdb_id}_ligand.sdf")
         dst_sdf = os.path.join(TRAIN_SET_DIR, 'drug_sdf', f"{pdb_id}.sdf")
         if os.path.exists(src_sdf):
             shutil.copy2(src_sdf, dst_sdf)
-        
-        # PDB 파일 복사
+
         src_pdb = os.path.join(pdb_folder, f"{pdb_id}_protein.pdb")
         dst_pdb = os.path.join(TRAIN_SET_DIR, 'target_pdb', f"{pdb_id}.pdb")
         if os.path.exists(src_pdb):
             shutil.copy2(src_pdb, dst_pdb)
-        
-        # SMILES 파일 생성
+
         smiles_path = os.path.join(TRAIN_SET_DIR, 'drug_smiles', f"{pdb_id}.smi")
         with open(smiles_path, 'w') as f:
             f.write(row['compound_iso_smiles'])
-        
-        # FASTA 파일 생성
+
         fasta_path = os.path.join(TRAIN_SET_DIR, 'target_fasta', f"{pdb_id}.fasta")
         with open(fasta_path, 'w') as f:
             f.write(f">{pdb_id}\n")

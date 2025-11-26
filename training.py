@@ -2,10 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from util.util import *
-from util.util import _to_onehot
-from config import get_config
-from models.UAMRL import UAMRL
+from uamrl.util.util import *
+from uamrl.util.util import _to_onehot
+from uamrl.config import get_config
+from uamrl.models.UAMRL import UAMRL
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter

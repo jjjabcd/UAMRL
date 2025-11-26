@@ -2,12 +2,12 @@ import os, sys
 import numpy as np
 import torch
 import torch.nn as nn
-from util.util import *
+from uamrl.util.util import *
 from torch_geometric.nn import SAGEConv, global_add_pool as gap
 from transformers import BertTokenizer, BertModel, AutoTokenizer, AutoModel
 import torch.nn.functional as F
 curPath = os.path.abspath(os.path.dirname(__file__))
-rootPath = os.path.split(curPath)[0]
+rootPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(rootPath)
 import esm as ESM
 

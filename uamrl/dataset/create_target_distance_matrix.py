@@ -4,13 +4,12 @@ from Bio.PDB.PDBParser import PDBParser
 from tqdm import tqdm
 import numpy as np
 import warnings
-warnings.filterwarnings('ignore')  # PDBConstructionWarning 무시
+warnings.filterwarnings('ignore')
 
 pdb_dir = 'train_set/target_pdb'
 distance_dir = 'train_set/distance_matrix'
 
 def generate_dis_metirc(pdb_dir, distance_dir):
-    # 디렉토리 생성
     os.makedirs(distance_dir, exist_ok=True)
     
     parser = PDBParser(QUIET=True)
@@ -32,15 +31,14 @@ def generate_dis_metirc(pdb_dir, distance_dir):
             pdb_path = os.path.join(pdb_dir, pdb_file)
             pdb_id = pdb_file.replace('.pdb', '')
             dis_path = os.path.join(distance_dir, pdb_id + '.npz')
-            
-            # 이미 존재하는 파일은 건너뛰기
+
             if os.path.exists(dis_path):
                 success_count += 1
                 continue
             
             structure = parser.get_structure(pdb_id, pdb_path)
             
-            # C-alpha 좌표 추출
+            # C-alpha
             for model in structure:
                 for chain in model:
                     for residue in chain:
@@ -48,15 +46,14 @@ def generate_dis_metirc(pdb_dir, distance_dir):
                             if atom.get_name() == 'CA':
                                 coord = atom.get_vector()
                                 coordinate_list.append([coord[0], coord[1], coord[2]])
-                break  # 첫 번째 model만 사용
+                break
             
-            # 좌표가 없으면 건너뛰기
             if len(coordinate_list) == 0:
                 print(f"Warning: No CA atoms found in {pdb_file}")
                 fail_count += 1
                 continue
             
-            # Distance matrix 계산
+            # Distance matrix
             for i in range(len(coordinate_list)):
                 ca_raw_list = []
                 for j in range(len(coordinate_list)):

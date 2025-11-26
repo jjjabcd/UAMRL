@@ -1,4 +1,3 @@
-# create_data.py
 import os
 import math
 import numpy as np
@@ -18,9 +17,9 @@ def sdf_to_smiles(sdf_path):
 
 
 ###############################################
-# 2) Drug: SDF → Graph (UAMRL 방식 그대로)
+# 2) Drug: SDF → Graph
 ###############################################
-from util.graphUtil import getCompoundGraph
+from uamrl.util.graphUtil import getCompoundGraph
 
 def sdf_to_graph(sdf_path, temp_id="temp_drug"):
     return getCompoundGraph(temp_id, sdf_path=sdf_path)
@@ -39,20 +38,18 @@ AA_MAP = {
 
 def pdb_to_fasta(pdb_path, chain_id=None):
     """
-    PDB → FASTA sequence 변환
-    chain_id 지정 안 하면 첫 번째 단백질 체인을 사용
+    PDB → FASTA sequence
     """
     try:
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("protein", pdb_path)
 
-        # chain 선택
         for model in structure:
             for chain in model:
                 if chain_id is None or chain.id == chain_id:
                     seq = []
                     for residue in chain:
-                        if residue.id[0] != " ":  # HETATM 등 제외
+                        if residue.id[0] != " ":
                             continue
                         resname = residue.get_resname()
                         if resname in AA_MAP:
@@ -77,7 +74,6 @@ def pdb_to_distance_matrix(pdb_path, save_npz_path=None):
 
     coordinate_list = []
 
-    # === C-alpha 좌표 추출 (원본 코드 그대로) ===
     for model in structure:
         for chain in model:
             for residue in chain:
@@ -85,12 +81,11 @@ def pdb_to_distance_matrix(pdb_path, save_npz_path=None):
                     if atom.get_name() == 'CA':
                         coord = atom.get_vector()
                         coordinate_list.append([coord[0], coord[1], coord[2]])
-        break  # 첫 번째 model만 사용
+        break
 
     if len(coordinate_list) == 0:
         raise ValueError(f"No CA atoms found in protein: {pdb_path}")
 
-    # === 거리 행렬 계산 (원본 코드 그대로) ===
     CA_Metric = []
     for i in range(len(coordinate_list)):
         row = []
@@ -106,7 +101,6 @@ def pdb_to_distance_matrix(pdb_path, save_npz_path=None):
 
     CA_np = np.array(CA_Metric, dtype=np.float32)
 
-    # 선택적으로 저장
     if save_npz_path:
         np.savez(save_npz_path, map=CA_np)
 

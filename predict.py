@@ -5,8 +5,14 @@ import numpy as np
 from rdkit import Chem
 from Bio.PDB import PDBParser
 from torch_geometric.data import Data
-from util.util import protein2onehot, smiles_dict
-from models.UAMRL import UAMRL
+from uamrl.util.util import protein2onehot, smiles_dict
+from uamrl.models.UAMRL import UAMRL
+
+import warnings
+warnings.filterwarnings('ignore')
+
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.*')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"[INFO] Using device: {device}")
@@ -28,12 +34,12 @@ def extract_smiles_from_sdf(sdf_path):
 
 
 ############################################
-# SMILES → One-hot (훈련과 동일)
+# SMILES → One-hot
 ############################################
 def smiles_to_onehot(smiles, max_len=150):
     out = []
     for ch in smiles:
-        if ch not in smiles_dict:   # 학습 vocabulary에 없는 문자 skip
+        if ch not in smiles_dict:
             continue
         idx = smiles_dict[ch]
         vec = [0] * (len(smiles_dict) + 1)
@@ -79,7 +85,7 @@ def pdb_to_fasta(pdb_path):
 
 
 ############################################
-# FASTA → one-hot (훈련과 동일)
+# FASTA → one-hot
 ############################################
 amino_acids = ['PAD','A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K',
                'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
@@ -107,7 +113,7 @@ def fasta_to_onehot(seq, max_len=1000):
 
 
 ############################################
-# Distance Matrix (훈련과 동일)
+# Distance Matrix
 ############################################
 def pdb_to_distance_matrix(pdb_path):
     parser = PDBParser(QUIET=True)
@@ -137,7 +143,7 @@ def pdb_to_distance_matrix(pdb_path):
 
 
 ############################################
-# SDF → PyG graph (훈련과 완전 동일)
+# SDF → PyG graph
 ############################################
 atom_list = ['C','H','O','N','F','S','P','I','Cl','As','Se','Br','B','Pt','V',
              'Fe','Hg','Rh','Mg','Be','Si','Ru','Sb','Cu','Re','Ir','Os']
@@ -196,7 +202,6 @@ def predict(sdf_path, pdb_path, ckpt_path):
 
     print("=== Load checkpoint ===")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[INFO] Using device: {device}")
 
     model = UAMRL(65, 21, [32, 64, 128], 256)
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
@@ -217,7 +222,7 @@ def predict(sdf_path, pdb_path, ckpt_path):
     graph = sdf_to_graph(sdf_path)
 
     pdb_id = os.path.basename(pdb_path).replace(".pdb", "")
-    graph.id = [pdb_id]     # 필요함 — Prot_BERT가 id를 사용하기 때문
+    graph.id = [pdb_id]
     graph = graph.to(device)
 
     # -------------------------
@@ -255,8 +260,8 @@ def predict(sdf_path, pdb_path, ckpt_path):
         output, _ = model(c_seq, p_seq, p_img, graph)
 
         # -----------------------------
-        #  output = 32개의 값 (8 modes × 4 params)
-        #  가장 마지막 4개가 gs_private
+        #  output = 32 values (8 modes × 4 params)
+        #  last 4 values are gs_private
         # -----------------------------
         mu, v, alpha, beta = output[-4:]
 
@@ -266,33 +271,17 @@ def predict(sdf_path, pdb_path, ckpt_path):
         alpha = alpha.squeeze()
         beta  = beta.squeeze()
 
-        # ----------------------------------------
-        # NIG uncertainty 계산
-        # ----------------------------------------
-        # (alpha > 1이어야 함)
-        epistemic  = beta / (v * (alpha - 1))
-        aleatoric  = beta / (alpha - 1)
-        total_unc  = epistemic + aleatoric
-
-    print("\n===== Prediction Result =====")
-    print(f"Predicted Affinity (mu)     : {mu.item():.4f}")
-    print(f"Precision (v)               : {v.item():.4f}")
-    print(f"Alpha                       : {alpha.item():.4f}")
-    print(f"Beta                        : {beta.item():.4f}")
-    print("\n--- Uncertainty (NIG) ---")
-    print(f"Aleatoric uncertainty       : {aleatoric.item():.4f}")
-    print(f"Epistemic uncertainty       : {epistemic.item():.4f}")
-    print(f"Total uncertainty           : {total_unc.item():.4f}")
-    print("================================\n")
+    print("\n===== Prediction Result (NIG Parameters) =====")
+    print(f"Predicted Mean (delta) : {mu.item():.4f}")
+    print(f"Gamma (gamma) : {v.item():.4f}")
+    print(f"Alpha (alpha) : {alpha.item():.4f}")
+    print(f"Beta (beta) : {beta.item():.4f}")
 
     return {
         "mu": mu.item(),
         "v": v.item(),
         "alpha": alpha.item(),
-        "beta": beta.item(),
-        "aleatoric": aleatoric.item(),
-        "epistemic": epistemic.item(),
-        "total_uncertainty": total_unc.item(),
+        "beta": beta.item()
     }
 
 
